@@ -9,19 +9,23 @@ import numpy as np
 from mpi4py import MPI
 from class_1 import MonteCarlo
 
+# MPI Initialisation
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nworkers = comm.Get_size()
 
-n_walkers = int(1000)
-seed = 52648
+n_walkers = int(1000) # Number of walkers in grid
+seed = 52648 # Random seed generation
 
-n = 101
-h = 10e-1/(n-1)
+n = 101 # Grid needs to be odd to have a center grid point
+h = 10/(n-1) # As step size is 0.1cm
 
-grid = np.zeros([n+2, n+2])
+grid = np.zeros([n+2, n+2]) # To form grid, +2 points must be added to account for boundaries
 
 def grid_boundary(n, top, bottom, left, right):
+    """
+    This function generates the grid boundaries at which the walkers must stop at
+    """
     full_grid = np.zeros([n, n])
     
     row_zero = np.repeat(top, n)
@@ -35,6 +39,9 @@ def grid_boundary(n, top, bottom, left, right):
     return grid_boundary
 
 def randomwalkgen(i, j, grid):
+    """
+    This function generates a random walk for each position
+    """
     walk_grid = np.zeros_like(grid)
     position = np.array([i, j])
     path = np.array([1, 0], [-1, 0], [0, 1], [0, -1])
@@ -48,6 +55,7 @@ def randomwalkgen(i, j, grid):
         steps += 1
     return walk_grid
 
+# start_i/j represent the starting points for each walker along the x & y axis (i & j)
 start_i = np.array([int((n-1)/2), int((n-1)/4), int((n-1)/100), int((n-1)/100)])
 start_j = np.array([int((n-1)/2), int((n-1)/4), int((n-1)/4), int((n-1)/100)])
 
@@ -55,13 +63,17 @@ variables = np.array([start_i, start_j, grid], dtype=object)
 boundary = np.ones_like(grid)
 boundary[1:-1, 1:-1] = 0
 
+# Task 4.1a set up for a charge of 10/n^2, while every boundary has a voltage of 1V
 grid_boundary_1 = grid_boundary(n, 1, 1, 1, 1)
 grid_1 = np.zeros_like(grid)
 grid_1[1:-1, 1:-1] = 10/(n**2)
 
-grid_boundary_2 = grid_boundary(n, 1, 1, -1, -1)
 
+grid_boundary_2 = grid_boundary(n, 1, 1, -1, -1)
 def apply_charge_gradient(grid, h):
+    """
+    This function sets up a charge gradient which is drawn vertically along the grid
+    """
     grid_2 = np.zeros_like(grid)
     i, j = grid.shape
     charge_gradient = np.linspace(1, 0, i-2)[:, np.newaxis]
@@ -73,6 +85,9 @@ grid_2 = apply_charge_gradient(grid_boundary_2, h)
 grid_boundary_3 = grid_boundary(n, 2, 0, 2, -4)
 
 def exponential_grid(grid, h):
+    """
+    This function generates an exponential decaying charge distribution at the center of the grid
+    """
     grid_3 = np.zeros_like(grid)
     rows, cols = grid.shape
     
